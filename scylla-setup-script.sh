@@ -7,6 +7,7 @@ yum repolist
 yum update -y
 wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla.repo
 
+yum remove -y abrt
 yum install -y scylla-server scylla-jmx scylla-tools
 
 /usr/lib/scylla/scylla_raid_setup -d /dev/nvme0n1,/dev/nvme0n2,/dev/nvme0n3,/dev/nvme0n4,/dev/nvme0n5,/dev/nvme0n6,/dev/nvme0n7,/dev/nvme0n8 -u
@@ -16,3 +17,5 @@ yum install -y scylla-server scylla-jmx scylla-tools
 /usr/lib/scylla/scylla_coredump_setup
 
 systemctl stop firewalld
+echo "tsc" | tee -a /sys/bus/clocksource/devices/clocksource0/current_clocksource
+

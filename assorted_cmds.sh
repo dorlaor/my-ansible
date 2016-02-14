@@ -26,3 +26,35 @@ ansible -i ./hosts db -m ansible -i db.ini db -u fedora --sudo -m replace -a "de
 # cassandra-client commands
 ansible client -a "cassandra-stress write no-warmup duration=15m cl=QUORUM -schema 'replication(factor=3) keyspace=test1' -mode native cql3 -rate limit=25000/s threads=700 -node 10.184.13.11 -log file=/tmp/stress" -u root -vv
 ansible client -a "cassandra-stress write n=100000000 -pop 'seq=1..100000000' no-warmup duration=200m cl=ONE -mode native cql3 -rate threads=700 -node 10.184.5.100 -log file=/tmp/stress" -u root -vv
+
+# Scylla startup instructions
+
+#Edit the scylla.yaml with a single seed from one of the addresses above and local ip for listening:
+ansible -i ./hosts db -s -m shell -a "/usr/bin/sed -i -e \"s/seeds:.*/seeds: 10.240.0.4/g\" -e \"s/rpc_address:.*/rpc_address: 10.240.0.4/g\" -e \"s/listen_address:.*/listen_address: 10.240.0.4/g\"  /etc/scylla/scylla.yaml"
+
+#(make sure you give different listen addresses for different nodes - I need to fix it in ansible!)
+ssh dor@104.196.13.182 ""/usr/bin/sed -i -e \"s/seeds:.*/seeds: 10.240.0.4/g\" -e \"s/rpc_address:.*/rpc_address: 10.240.0.2/g\" -e \"s/listen_address:.*/listen_address: 10.240.0.2/g\"  /etc/scylla/scylla.yaml"
+
+#Enable poll mode (not a must, good for low rates)
+ansible -i ./hosts db -s -m replace -a "dest=/etc/sysconfig/scylla-server backup=yes regexp='SCYLLA_ARGS=' replace='SCYLLA_ARGS=\"--poll-mode\"'"
+#Start the servers:
+ansible -i ./hosts -s db -a "/usr/bin/systemctl start scylla-server" 
+#Check status:
+ansible -i ./hosts -s db -a "/usr/bin/systemctl status scylla-server" 
+#Start Jmx
+ansible -i ./hosts -s db -a "/usr/bin/systemctl start scylla-jmx" 
+#Check the cluster:
+ansible -i ./hosts -s db -a "/usr/bin/nodetool status" 
+
+
+#YCSB
+YCSB 5 
+--------
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.5.0/ycsb-0.5.0.tar.gz'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'tar xfvz ycsb-0.5.0.tar.gz'
+
+YCSB 6
+--------
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.6.0/ycsb-0.6.0.tar.gz'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'tar xfvz ycsb-0.6.0.tar.gz'
+
