@@ -1,0 +1,339 @@
+
+
+1 - Creating Scylla Servers in Rack Space
+-------------------------- 
+https://mycloud.rackspace.com/cloud/979174/servers
+
+1.1 - From Rackspace Server -> Cloud Server -> Create Server -> Give Server Name 
+1.2- Choose On Metal Servers -> Centos 7 -> Flavour Class IO -> Create Server 
+     
+     Note - You will need to set ssh key in order to be abe to connect from your machine
+     https://mycloud.rackspace.com/cloud/979174/servers#ssh-keys
+     
+2 - Create YCSB Load Servers 
+-------------------
+Repeat step 1-2 choose Flavour Class Compute .
+
+
+3 - Ansible Setup
+-------------------
+
+connect to all machines using ssh root@<server ip> and stop the firewall on these servers :
+
+ 3.1 systemctl stop firewalld
+ 3.2 copy your local rackspace id rsa to the machine from which you will run ansible (Scyall Node 1 - seed )
+     scp ~/.ssh/id_rsa root@<host ip>:/root/.ssh
+ 3.3 install ansible 
+    yum install ansible
+    
+ 3.4 edit ensible hosts.ini file 
+ 
+     and set the YCSB , Scylla (and Cassandra if needed) IP Groups
+	 
+	 for example:
+     
+    [ycsb]
+    104.130.21.178
+    104.130.21.209
+    104.130.21.20
+    104.130.21.203
+
+    [scylla]
+    104.130.21.177
+
+3.5 validate ansible configuration :
+
+[root@alon-scylla ~]# ansible  -i hosts.ini ycsb  -u root -m shell -a 'echo $TERM'
+
+
+104.130.21.178 | success | rc=0 >>
+xterm-256color
+
+104.130.21.209 | success | rc=0 >>
+xterm-256color
+
+104.130.21.203 | success | rc=0 >>
+xterm-256color
+
+104.130.21.20 | success | rc=0 >>
+xterm-256color
+
+4 - Installing Scylla 
+----------------------
+
+Connect to the server where ansible installed 
+
+Use the instruction in the following link :
+
+http://www.scylladb.com/doc/getting-started-rpm/#rhel-7centos-7
+
+4.1 - Setup Scylla Repository
+
+YCSB Group
+----------
+ansible  -i hosts.ini ycsb  -u root -m shell -a ' wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla.repo'
+
+DB Group
+---------
+
+ansible  -i hosts.ini scylla  -u root -m shell -a ' wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla.repo'
+
+4.2 Install Scylla RPM's and set up DB Environment 
+
+YCSB Group
+-----
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'yum remove -y abrt'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'yum -y install scylla-server scylla-jmx scylla-tools'
+
+DB Groupd
+-------
+ansible  -i hosts.ini scylla  -u root -m shell -a 'yum -y install scylla-server scylla-jmx scylla-tools'
+
+
+sudo yum install scylla-server scylla-jmx scylla-tools
+
+
+
+4.3 run the follwoing scripts to setup the Scylla Environment on DB Servers:
+
+ansible  -i hosts.ini scylla  -u root -m shell -a '/usr/lib/scylla/scylla_raid_setup -d /dev/sdb,/dev/sdc -u'
+ansible  -i hosts.ini scylla  -u root -m shell -a '/usr/lib/scylla/posix_net_conf.sh -mq'
+ansible  -i hosts.ini scylla  -u root -m shell -a '/usr/lib/scylla/scylla_ntp_setup'
+ansible  -i hosts.ini scylla  -u root -m shell -a '/usr/lib/scylla/scylla_bootparam_setup'
+ansible  -i hosts.ini scylla  -u root -m shell -a '/usr/lib/scylla/scylla_coredump_setup'
+
+for cassandra :
+
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_raid_setup -d /dev/sdb,/dev/sdc -u'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/posix_net_conf.sh -mq'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_ntp_setup'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_bootparam_setup'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_coredump_setup'
+
+4.4 set scylla parameters for client remote connection and getting node status details 
+
+connect to the scylla server where all YCSB clients will connect and change the following parameters 
+(it can be done on all Scylla servers as well)
+
+For Node tool 
+----------------------------
+add following lines to /etc/scylla/scylla.yaml
+api_port: 10000
+api_address:<server ip>
+
+to be able to connect to scylla from remote using cqlsh
+--------------------------------------
+change the following parameter in /etc/scylla/scylla.yaml
+
+rpc_address: <server ip>
+ 
+4.4  Start Scylla 
+
+start scyall-server service
+----------------
+ansible  -i hosts.ini db  -u root -m shell -a 'systemctl start scylla-server'
+
+check that you can connect using cqlsh :
+
+cqlsh <local server ip>
+
+start scyall-jmx service
+----------------
+
+5 - Install YCSB 
+
+YCSB 5 
+--------
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.5.0/ycsb-0.5.0.tar.gz'
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'tar xfvz ycsb-0.5.0.tar.gz'
+
+YCSB 6
+--------
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.6.0/ycsb-0.6.0.tar.gz'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'tar xfvz ycsb-0.6.0.tar.gz'
+
+#cd ycsb-0.6.0
+
+
+6 - Create YCSB Schema and Load Table in Scylla
+
+cqlsh <server ip>
+
+for 1 node test use replication factor =1 for 3 and more => 3:
+
+CREATE KEYSPACE ycsb
+WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+
+CREATE KEYSPACE ycsb
+WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
+
+create the table 
+------------
+
+use ycsb;
+
+create table usertable (
+y_id varchar primary key,
+field0 varchar,
+field1 varchar,
+field2 varchar,
+field3 varchar,
+field4 varchar,
+field5 varchar,
+field6 varchar,
+field7 varchar,
+field8 varchar,
+field9 varchar);
+
+
+
+7 - Load data for tests - in this case 10M records 
+
+from one of YCSB clients run the following command (set the <hostip> to Scylla Seed server ):
+
+/root/ycsb-0.5.0/bin/ycsb load cassandra2-cql -p hosts="<Scylla-Host>" -P /root/ycsb-0.5.0/workloads/workloada  -p recordcount=10000000  -threads 8000 -s
+
+
+
+8 -  run YCSB Load 
+
+From Scylla seed server using ansible run :
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a '/root/ycsb-0.5.0/bin/ycsb run cassandra2-cql -p hosts="<Scylla-Host>" -P /root/ycsb-0.5.0/workloads/workloada  -p operationcount=100000000   -threads 8000 -s 2> stat.log' -vv
+
+
+
+9 -  to take the ops /sec statistics from the stat file user the command :
+
+cut -d';' -f2 stat_1.log
+
+10  - Monitoring - Start EC2 Scylla Monitoring Instance 
+
+run -  scylla-monitoring/start-all-ec2.sh
+
+--collectd-address=server:port --collectd=1 --collectd-hostname=name --collectd-poll-period 1000
+where server:port are of the collectd server, and name is unique per scylla instance.
+When running Scylla as a service, add these options to file /etc/sysconfig/scylla-server, to the line starting wit
+
+--collectd-address=10.223.208.174:25826 --collectd=1 --collectd-hostname=name --collectd-poll-period 1000
+
+view monitoring data in :
+
+Riemann
+--------
+http://54.147.137.210:4567/#throughput
+
+
+graphite :
+----------
+
+http://54.147.137.210:8080/
+
+Tessera :
+----------
+
+http://54.147.137.210:8081/dashboards/13/scylla
+
+
+---  For Work 
+
+/root/ycsb-0.5.0/bin/ycsb load cassandra2-cql -p hosts="10.184.11.49" -P /root/ycsb-0.5.0/workloads/workloada  -p recordcount=10000000  -p cassandra.writeconsistencylevel=THREE -threads 8000 -s
+
+/root/ycsb-0.5.0/bin/ycsb load cassandra2-cql -p hosts="10.184.11.49" -P /root/ycsb-0.5.0/workloads/workloada  -p recordcount=10000000  -threads 8000 -s
+
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a '/root/ycsb-0.5.0/bin/ycsb run cassandra2-cql -p hosts="10.184.11.49" -P /root/ycsb-0.5.0/workloads/workloada  -p operationcount=100000000  -p cassandra.writeconsistencylevel=QUORUM -p cassandra.readconsistencylevel=QUORUM -threads 5000 -s 2> stat.log' -vv
+
+
+
+/root/ycsb-0.5.0/bin/ycsb run cassandra2-cql -p hosts="23.253.157.85" -P /root/ycsb-0.5.0/workloads/workloada  -p operationcount=10000000  -threads 8000 -p cassandra.writeconsistencylevel=THREE -p cassandra.readconsistencylevel=THREE  -s
+
+
+--------------------
+for Cassandra copy repo file to multiple locations :
+
+--------------------
+
+1 - install ansible on the first node and setup hosts.ini (ycsb and cassandra groups)
+
+2 - update yum repository :
+
+ansible  -i hosts.ini cassandra  -u root -m shell -a 'yum -y update'
+
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'yum -y update'
+
+3 - install java
+
+ansible  -i hosts.ini cassandra  -u root -m shell -a 'yum -y install java'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'yum -y install java'
+
+4 - create cassandra repsitory file on the first node 
+
+vim /etc/yum.repos.d/datastax.repo
+
+add the following entries :
+
+[datastax]
+name = DataStax Repo for Apache Cassandra
+baseurl = http://rpm.datastax.com/community
+enabled = 1
+gpgcheck = 0
+
+5- copy the yum rep file to servers 
+ansible  -i hosts.ini ycsb -u root -m copy -a "src=/etc/yum.repos.d/datastax.repo dest=/etc/yum.repos.d/datastax.repo"
+ansible  -i hosts.ini cassandra -u root -m copy -a "src=/etc/yum.repos.d/datastax.repo dest=/etc/yum.repos.d/datastax.repo"
+
+6 - setup raid disks in cassandra servers :
+
+mdadm --create --verbose --force --run /dev/md0 --level=0 -c256 --raid-devices=2 /dev/sdb /dev/sdc
+blockdev --setra 65536 /dev/md0
+mkfs.xfs /dev/md0 -f
+echo "DEVICE /dev/sdb /dev/sdc" > /etc/mdadm.conf
+mdadm --detail --scan >> /etc/mdadm.conf
+UUID=`blkid /dev/md0 | awk '{print $2}'`
+echo "$UUID /var/lib/cassandra xfs noatime 0 0" >> /etc/fstab
+mkdir /var/lib/cassandra
+mount /var/lib/cassandra
+
+install scylla-tools
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/posix_net_conf.sh -mq'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_ntp_setup'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_bootparam_setup'
+ansible  -i hosts.ini cassandra  -u root -m shell -a '/usr/lib/scylla/scylla_coredump_setup'
+
+7 - Install Cassandra 2.2  :
+
+ansible  -i hosts.ini cassandra  -u root -m shell -a 'yum -y install dsc22'
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'yum -y install dsc22'
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a 'systemctl stop firewalld'
+ansible  -i hosts.ini cassandra  -u root -m shell -a 'systemctl stop firewalld'
+
+7 - Configure Cassandra Cluster 
+
+
+
+
+ansible  -i hosts.ini ycsb  -u root -m shell -a '/root/ycsb-0.5.0/bin/ycsb run cassandra2-cql -p hosts="104.130.21.35" -P /root/ycsb-0.5.0/workloads/workloada  -p operationcount=100000000  -p cassandra.writeconsistencylevel=QUORUM -p cassandra.readconsistencylevel=QUORUM -threads 100 -s 2> stat.log' -vv
+
+
+
+
+setting cqlsh timeout :
+
+shlomi@localhost~/cassandra (master)$ cat ~/.cassandra/cqlshrc
+[connection]
+client_timeout = 10000
+
+
+
+---------------
+
+pull mode
+---------
+in file /etc/sysconfig/scylla-server
+update line
+SCYLLA_ARGS="--poll-mode"
+
