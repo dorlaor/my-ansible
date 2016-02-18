@@ -10,7 +10,13 @@ wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb
 yum remove -y abrt
 yum install -y scylla-server scylla-jmx scylla-tools
 
-/usr/lib/scylla/scylla_raid_setup -d /dev/nvme0n1,/dev/nvme0n2,/dev/nvme0n3,/dev/nvme0n4,/dev/nvme0n5,/dev/nvme0n6,/dev/nvme0n7,/dev/nvme0n8 -u
+#setup the nvme drives (auto detect their number)
+i=$(ls /dev/nvme0n? -la | wc -l)
+NVME=
+for (( j=1 ; j < i ; j++)); do NVME+="/dev/nvme0n$j," ; done
+NVME+="/dev/nvme0n$i"
+/usr/lib/scylla/scylla_raid_setup -d $NVME -u
+
 /usr/lib/scylla/posix_net_conf.sh -mq
 /usr/lib/scylla/scylla_ntp_setup
 /usr/lib/scylla/scylla_bootparam_setup
