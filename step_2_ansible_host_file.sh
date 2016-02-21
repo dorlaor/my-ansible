@@ -7,13 +7,14 @@ print_usage() {
     echo "  -f Create ansible host file"
     echo "  -i get servers internal IPs"
     echo "  -k kill all machines"
+    echo "  -h help"
     exit 1
 }
 
 FILE=0
 IP=0
 KILL=0
-while getopts :kfih OPT; do
+while getopts :fkih OPT; do
     case "$OPT" in
         "f")
             FILE=1

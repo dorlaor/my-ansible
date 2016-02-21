@@ -10,7 +10,7 @@ print_usage() {
 }
 
 STR=0
-while getopts :at:h OPT; do
+while getopts t:ah OPT; do
     case "$OPT" in
         "a")
             STR="all"

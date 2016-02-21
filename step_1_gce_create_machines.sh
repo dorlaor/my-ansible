@@ -13,7 +13,7 @@ print_usage() {
 CLIENTS=0
 SERVERS=0
 INDX=0
-while getopts c:si:h OPT; do
+while getopts c:s:i:h OPT; do
     case "$OPT" in
         "s")
             SERVERS=$OPTARG
