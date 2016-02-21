@@ -36,12 +36,7 @@ done
 SEED=$(./step_2_ansible_host_file.sh -i|head -1)
 ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/scylla/scylla.yaml regexp='seeds: \"127.0.0.1\"' replace='seeds: $SEED'"
 
-
-ansible -i ./hosts.init $STR -m shell -a "/usr/sbin/ip addr show | /usr/bin/grep inet" 
-IP=$(ifconfig  eth0 | grep broadcast | awk '{print $2}')
-ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/scylla/scylla.yaml regexp='listen_address"' replace='listen_address: $IP'"
-ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/scylla/scylla.yaml regexp='rpc_address"' replace='rpc_address: $IP'"
-
+ansible-playbook -i ./hosts.init scylla-conf.yaml
 
 
 #Poll mode

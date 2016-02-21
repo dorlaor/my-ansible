@@ -1,0 +1,9 @@
+
+- hosts: servers
+  sudo: yes
+  tasks:
+    - name: start scylla
+      service: name=scylla-server state=started
+
+    - name: start scylla jmx
+      service: name=scylla-jmx state=started

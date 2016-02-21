@@ -1,0 +1,9 @@
+
+- hosts: servers
+  sudo: yes
+  tasks:
+    - name : replace listen_address
+      lineinfile: "dest=/etc/scylla/scylla.yaml regexp='^listen_address*' line='listen_address: {{ansible_all_ipv4_addresses[0]}}'"
+
+    - name : replace rpc_address
+      lineinfile: "dest=/etc/scylla/scylla.yaml regexp='^rpc_address*' line='rpc_address: {{ansible_all_ipv4_addresses[0]}}'"
