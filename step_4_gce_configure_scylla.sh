@@ -24,21 +24,12 @@ while getopts t:ah OPT; do
     esac
 done
 
-
-#set yaml addresses
-
-#example commands
-#No need for autobootstrap, yet
-#ansible -i my.ini Scylla -u centos --sudo -m lineinfile -a 'dest=/etc/scylla/scylla.yaml regexp="auto_bootstrap: false" line="# auto_bootstrap: false"'
-#ansible -i my.ini Scylla -u centos  -m shell -a 'nodetool refresh keyspace1 standard1'
-
+#Add poll mode
+ansible -i ./hosts.init servers --sudo -m replace -a "dest=/etc/sysconfig/scylla-server backup=yes regexp='SCYLLA_ARGS=\"' replace='SCYLLA_ARGS=\"--poll-mode '"
 
 SEED=$(./step_2_ansible_host_file.sh -i|head -1)
 ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/scylla/scylla.yaml regexp='seeds: \"127.0.0.1\"' replace='seeds: $SEED'"
 
 ansible-playbook -i ./hosts.init scylla-conf.yaml
+ansible-playbook -i ./hosts.init scylla-start.yaml
 
-
-#Poll mode
-#ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/sysconfig/scylla-server backup=yes regexp='SCYLLA_ARGS=' replace='SCYLLA_ARGS=\"--poll-mode\"'"
-#ansible db -u root -m replace -a "dest=/etc/sysconfig/scylla-server backup=yes regexp='collectd-hostname=' replace='collectd-hostname=scyllaRS\"collectd-hostname=scylla\"'"
