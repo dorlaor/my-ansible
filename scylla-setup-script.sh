@@ -13,9 +13,9 @@ yum install -y scylla-server scylla-jmx scylla-tools
 #setup the nvme drives (auto detect their number)
 i=$(ls /dev/nvme0n? -la | wc -l)
 NVME=
-for (( j=1 ; j < i ; j++)); do NVME+="/dev/nvme0n$j," ; done
+for (( j=1 ; j < $i ; j++)); do NVME+="/dev/nvme0n$j," ; done
 NVME+="/dev/nvme0n$i"
-/usr/lib/scylla/scylla_raid_setup -d $NVME -u
+/usr/lib/scylla/scylla_raid_setup --disks $NVME --update-fstab 
 
 /usr/lib/scylla/posix_net_conf.sh -mq
 /usr/lib/scylla/scylla_ntp_setup
