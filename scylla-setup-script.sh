@@ -5,7 +5,9 @@ wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 yum install -y epel-release-latest-7.noarch.rpm
 yum repolist
 yum update -y
-wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla.repo
+#wget -O /etc/yum.repos.d/scylla.repo https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla.repo
+wget -O /etc/yum.repos.d/scylla.repo http://downloads.scylladb.com/rpm/unstable/centos/master/latest/scylla.repo
+
 
 yum remove -y abrt
 yum install -y scylla-server scylla-jmx scylla-tools
