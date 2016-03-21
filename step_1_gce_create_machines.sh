@@ -60,8 +60,6 @@ echo "About to create $CLIENTS clients"
 for ((i=$INDX ; i < $CLIENTS ; i++ )); do
 gcloud compute instances create client-$i \
     --machine-type n1-standard-16 \
-    --local-ssd interface=nvme \
-    --local-ssd interface=nvme \
     --image centos-7-v20160126 \
     --image-project centos-cloud &
 done
