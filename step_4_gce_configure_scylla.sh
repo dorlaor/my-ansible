@@ -30,6 +30,9 @@ ansible -i ./hosts.init servers --sudo -m replace -a "dest=/etc/sysconfig/scylla
 SEED=$(./step_2_ansible_host_file.sh -i|head -1)
 ansible -i ./hosts.init $STR --sudo -m replace -a "dest=/etc/scylla/scylla.yaml regexp='seeds: \"127.0.0.1\"' replace='seeds: $SEED'"
 
+#run the mandatory io_setup which calls iotune
+ansible -i ./hosts.init $STR --sudo -a "/usr/lib/scylla/scylla_io_setup"
+
 ansible-playbook -i ./hosts.init scylla-conf.yaml
 ansible-playbook -i ./hosts.init scylla-start.yaml
 
