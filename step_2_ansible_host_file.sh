@@ -32,8 +32,8 @@ while getopts :fkih OPT; do
 done
 
 
-CLIENTS="n1-standard-16"
-SERVERS="n1-standard-32"
+CLIENTS="client"
+SERVERS="server"
 HOSTS_FILE='hosts.init'
 
 if [ $FILE -eq 1 ]; then

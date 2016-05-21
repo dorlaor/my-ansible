@@ -7,13 +7,16 @@ print_usage() {
     echo "  -c  Amount of clients"
     echo "  -s  Amount of servers"
     echo "  -i  Start counting from i=x [default=0]"
+    echo "  -v  Specify vcpu count, default=32"
     exit 1
 }
 
 CLIENTS=0
 SERVERS=0
 INDX=0
-while getopts c:s:i:h OPT; do
+VCPU=32
+
+while getopts c:s:i:v:h OPT; do
     case "$OPT" in
         "s")
             SERVERS=$OPTARG
@@ -23,6 +26,9 @@ while getopts c:s:i:h OPT; do
             ;;
         "c")
             CLIENTS=$OPTARG
+            ;;
+        "v")
+            VCPU=$OPTARG
             ;;
         "h")
             print_usage
@@ -40,7 +46,7 @@ echo "About to create $SERVERS servers"
 
 for ((i=$INDX ; i < $SERVERS ; i++ )); do
 gcloud compute instances create server-$i \
-    --machine-type n1-standard-32 \
+    --machine-type n1-standard-$VCPU \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
