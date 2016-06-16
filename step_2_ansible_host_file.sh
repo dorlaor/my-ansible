@@ -37,6 +37,7 @@ SERVERS="server"
 HOSTS_FILE='hosts.init'
 
 if [ $FILE -eq 1 ]; then
+   rm -f $HOSTS_FILE
    echo "[clients]" >> $HOSTS_FILE
    gcloud compute instances list | grep $CLIENTS | awk '{print $5}' >> $HOSTS_FILE
    echo "" >> $HOSTS_FILE
@@ -52,4 +53,5 @@ fi
 if [ $KILL -eq 1 ]; then
    MACHINES=$(gcloud compute instances list | grep n1-standard | awk '{print $1}' | xargs)
    gcloud compute instances delete $MACHINES
+   rm -f $HOSTS_FILE
 fi
